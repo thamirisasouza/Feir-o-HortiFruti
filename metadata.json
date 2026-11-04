@@ -1,0 +1,8 @@
+{
+  "name": "Feirão Hortifruti",
+  "description": "Feira fresca com frutas, verduras, legumes selecionados a mão e pedido direto pelo WhatsApp para combinar sua entrega.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
