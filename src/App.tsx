@@ -24,14 +24,6 @@ import { CartEntry, WhatsAppCheckoutDrawer } from './components/WhatsAppCheckout
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { AdminPanelModal } from './components/AdminPanelModal';
 
-function getBrasiliaTimeFormatted(): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date());
-}
-
 const CATEGORY_IMAGE_MAP: Record<string, string> = {
   frutas: '/images/morango.jpg',
   verduras: '/images/alface.jpg',
@@ -66,7 +58,6 @@ export default function App() {
 
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('todos');
   const [searchQuery, setSearchQuery] = useState('');
-  const [brasiliaTime, setBrasiliaTime] = useState<string>(getBrasiliaTimeFormatted);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
 
@@ -80,13 +71,6 @@ export default function App() {
   // Horizontal scroll refs for Home sections
   const ofertasScrollRef = useRef<HTMLDivElement>(null);
   const favoritosScrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBrasiliaTime(getBrasiliaTimeFormatted());
-    }, 30000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (isBannerPaused || currentView !== 'home' || banners.length <= 1) return;
@@ -398,10 +382,10 @@ export default function App() {
                 <CustomMinusStemIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               <span
-                className="text-[11px] sm:text-sm font-mono-tabular font-extrabold"
+                className="text-xs sm:text-sm font-mono-tabular font-extrabold px-1"
                 style={{ color: siteSettings.primaryButtonColor }}
               >
-                {qtyInCart} na cesta
+                {qtyInCart}
               </span>
               <button
                 type="button"
@@ -450,7 +434,7 @@ export default function App() {
                 <img
                   src={siteSettings.logoUrl}
                   alt="Logo"
-                  className="h-14 sm:h-20 md:h-24 w-auto max-w-[140px] sm:max-w-[220px] md:max-w-[280px] object-contain shrink-0 transition-transform group-hover:scale-105 drop-shadow-xs"
+                  className="w-[200px] h-[55px] object-contain shrink-0 transition-transform group-hover:scale-105 drop-shadow-xs"
                 />
 
                 {/* Nome lado a lado sem pular linha ou somente logo conforme configurado */}
@@ -781,12 +765,14 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setCurrentView('home')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E6F2E7] hover:bg-[#0F6E16] text-[#0F6E16] hover:text-white text-xs font-bold transition-all border border-[#CBE5CD] cursor-pointer shadow-2xs shrink-0"
+                  aria-label="Voltar ao Início"
+                  title="Voltar ao Início"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-[#E6F2E7] hover:bg-[#0F6E16] text-[#0F6E16] hover:text-white text-xs font-bold transition-all border border-[#CBE5CD] cursor-pointer shadow-2xs shrink-0"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
-                  <span>Voltar ao Início</span>
+                  <span className="hidden sm:inline">Voltar ao Início</span>
                 </button>
 
                 <div className="flex items-center gap-2 whitespace-nowrap">
@@ -794,7 +780,7 @@ export default function App() {
                   <img
                     src={siteSettings.logoUrl}
                     alt="Logo"
-                    className="h-9 sm:h-12 w-auto max-w-[120px] sm:max-w-[180px] object-contain shrink-0"
+                    className="h-[46px] w-[100px] object-contain shrink-0"
                   />
                   {siteSettings.showBrandName && (
                     <span className="text-sm sm:text-base font-extrabold font-display whitespace-nowrap">
@@ -993,11 +979,6 @@ export default function App() {
               <p className="text-xs sm:text-sm text-[#4A634E] leading-relaxed max-w-sm">
                 Colheita fresca e produtos de qualidade selecionados a mão diretamente do produtor. Faça seu pedido com facilidade e receba com rapidez.
               </p>
-
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#F0F7F1] border border-[#D5E6D6] text-[11px] text-[#2F5233]">
-                <span className="w-2 h-2 rounded-full bg-[#0F6E16] animate-pulse shrink-0" />
-                <span>Horário de Brasília: <strong>{brasiliaTime}</strong></span>
-              </div>
             </div>
 
             {/* Column 2: Hours & Ordering */}
