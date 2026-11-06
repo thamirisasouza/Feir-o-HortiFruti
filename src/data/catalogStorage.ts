@@ -28,22 +28,22 @@ export const DEFAULT_BANNERS: BannerItem[] = [
   {
     id: 'banner-1',
     src: '/images/banner_1.jpg',
-    alt: 'Banner 1 - Feirão Hortifruti',
+    alt: 'Banner 1 - HortiFeirão',
   },
   {
     id: 'banner-2',
     src: '/images/banner_2.jpg',
-    alt: 'Banner 2 - Feirão Hortifruti',
+    alt: 'Banner 2 - HortiFeirão',
   },
   {
     id: 'banner-3',
     src: '/images/banner_3.jpg',
-    alt: 'Banner 3 - Feirão Hortifruti',
+    alt: 'Banner 3 - HortiFeirão',
   },
   {
     id: 'banner-4',
     src: '/images/banner_frutas_1.jpg',
-    alt: 'Banner 4 - Feirão Hortifruti',
+    alt: 'Banner 4 - HortiFeirão',
   },
 ];
 
@@ -59,10 +59,10 @@ export interface SiteCustomization {
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteCustomization = {
-  logoUrl: '/assets/aistudio/file_0000000083e4820ea22b0f81959d3438_19ea954d.png',
+  logoUrl: '/images/hortifeirao_logo.jpg',
   showBrandName: true,
-  brandNameFirst: 'Feirão',
-  brandNameSecond: 'Hortifruti',
+  brandNameFirst: 'Horti',
+  brandNameSecond: 'Feirão',
   primaryButtonColor: '#0F6E16',
   accentButtonColor: '#FF6600',
   brandFontSize: '36px',
@@ -162,7 +162,21 @@ export function getStoredSiteSettings(): SiteCustomization {
     const raw = localStorage.getItem(SITE_SETTINGS_STORAGE_KEY);
     if (!raw) return DEFAULT_SITE_SETTINGS;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_SITE_SETTINGS, ...parsed };
+    const settings = { ...DEFAULT_SITE_SETTINGS, ...parsed };
+    if (settings.brandNameFirst === 'Feirão' && settings.brandNameSecond === 'Hortifruti') {
+      settings.brandNameFirst = 'Horti';
+      settings.brandNameSecond = 'Feirão';
+      try {
+        localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      } catch {}
+    }
+    if (!settings.logoUrl || settings.logoUrl.includes('file_0000000083e4820ea22b0f81959d3438')) {
+      settings.logoUrl = '/images/hortifeirao_logo.jpg';
+      try {
+        localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      } catch {}
+    }
+    return settings;
   } catch (err) {
     console.error('Erro ao ler configurações do site:', err);
     return DEFAULT_SITE_SETTINGS;

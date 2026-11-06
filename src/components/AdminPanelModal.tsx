@@ -89,7 +89,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editingCatLabel, setEditingCatLabel] = useState<string>('');
 
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  type ProductSortOption = 'nome-asc' | 'nome-desc' | 'preco-asc' | 'preco-desc';
+  const [adminSortBy, setAdminSortBy] = useState<ProductSortOption>('nome-asc');
+
+  // In-app notifications & custom modal confirmation (Never use browser alert/confirm)
+  const [systemNotification, setSystemNotification] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'warning';
+  } | null>(null);
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Customization state
   const [customSettings, setCustomSettings] = useState<SiteCustomization>(siteSettings);
@@ -103,11 +120,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const logoCameraInputRef = useRef<HTMLInputElement>(null);
   const [targetBannerIdForPhoto, setTargetBannerIdForPhoto] = useState<string | null>(null);
 
-  const showToast = (message: string) => {
-    setSuccessToast(message);
+  const showNotification = (
+    message: string,
+    type: 'success' | 'error' | 'warning' = 'success'
+  ) => {
+    setSystemNotification({ message, type });
     setTimeout(() => {
-      setSuccessToast(null);
-    }, 3500);
+      setSystemNotification((current) => (current?.message === message ? null : current));
+    }, 4000);
+  };
+
+  const showToast = (message: string) => {
+    showNotification(message, 'success');
   };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -140,9 +164,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     showToast('Você saiu do painel administrativo.');
   };
 
-  // Filter products in admin
+  // Filter and sort products in admin with A-Z as default
   const filteredAdminProducts = useMemo(() => {
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       const matchCat = selectedCatFilter === 'todos' || p.categoryId === selectedCatFilter;
       const q = searchTerm.trim().toLowerCase();
       const matchQuery =
@@ -152,7 +176,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         p.unitLabel.toLowerCase().includes(q);
       return matchCat && matchQuery;
     });
-  }, [products, selectedCatFilter, searchTerm]);
+
+    return [...list].sort((a, b) => {
+      switch (adminSortBy) {
+        case 'nome-desc':
+          return b.name.localeCompare(a.name, 'pt-BR', { sensitivity: 'base' });
+        case 'preco-asc':
+          return a.price - b.price;
+        case 'preco-desc':
+          return b.price - a.price;
+        case 'nome-asc':
+        default:
+          return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+      }
+    });
+  }, [products, selectedCatFilter, searchTerm, adminSortBy]);
 
   // Quick toggle Esgotado on a product
   const handleToggleEsgotado = (productId: string) => {
@@ -196,7 +234,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const handleSaveInlineCategoryEdit = (catId: string) => {
     const trimmed = editingCatLabel.trim();
     if (!trimmed) {
-      alert('O nome da categoria não pode ficar vazio.');
+      showNotification('O nome da categoria não pode ficar vazio.', 'warning');
       return;
     }
     onEditCategory(catId, trimmed);
@@ -276,11 +314,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     if (!editingProduct) return;
 
     if (!editingProduct.name.trim()) {
-      alert('Por favor, informe o nome do produto.');
+      showNotification('Por favor, informe o nome do produto.', 'warning');
       return;
     }
     if (editingProduct.price <= 0) {
-      alert('Por favor, informe um preço válido.');
+      showNotification('Por favor, informe um preço válido.', 'warning');
       return;
     }
 
@@ -316,7 +354,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       onSaveBanners(updated);
       showToast('Imagem do banner atualizada com sucesso!');
     } catch {
-      alert('Erro ao processar imagem do banner.');
+      showNotification('Erro ao processar imagem do banner.', 'error');
     } finally {
       e.target.value = '';
       setTargetBannerIdForPhoto(null);
@@ -329,7 +367,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     if (!file) return;
 
     if (banners.length >= 5) {
-      alert('O limite máximo é de 5 banners.');
+      showNotification('O limite máximo é de 5 banners no carrossel.', 'warning');
       return;
     }
 
@@ -343,7 +381,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       onSaveBanners([...banners, newBanner]);
       showToast('Novo banner adicionado ao carrossel!');
     } catch {
-      alert('Erro ao carregar imagem do banner.');
+      showNotification('Erro ao carregar imagem do banner.', 'error');
     } finally {
       e.target.value = '';
     }
@@ -352,14 +390,23 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // Delete banner (min 1 banner)
   const handleDeleteBanner = (bannerId: string) => {
     if (banners.length <= 1) {
-      alert('É necessário manter pelo menos 1 banner no carrossel.');
+      showNotification('É necessário manter pelo menos 1 banner no carrossel.', 'warning');
       return;
     }
-    if (window.confirm('Deseja realmente remover esta foto de banner?')) {
-      const updated = banners.filter((b) => b.id !== bannerId);
-      onSaveBanners(updated);
-      showToast('Banner removido com sucesso!');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Remover Banner',
+      message: 'Deseja realmente remover esta foto de banner do carrossel?',
+      confirmLabel: 'Remover Banner',
+      cancelLabel: 'Cancelar',
+      isDestructive: true,
+      onConfirm: () => {
+        const updated = banners.filter((b) => b.id !== bannerId);
+        onSaveBanners(updated);
+        showToast('Banner removido com sucesso!');
+        setConfirmDialog(null);
+      },
+    });
   };
 
   // LOGO UPLOAD HANDLER (SEM BORDAS)
@@ -374,7 +421,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       onSaveSiteSettings(updated);
       showToast('Logo atualizada com sucesso na nav e no rodapé!');
     } catch {
-      alert('Erro ao carregar a logo.');
+      showNotification('Erro ao carregar a logo.', 'error');
     } finally {
       e.target.value = '';
     }
@@ -387,12 +434,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   const handleConfirmReset = () => {
-    if (window.confirm('Tem certeza que deseja restaurar o catálogo de produtos e configurações para o padrão original?')) {
-      onResetCatalog();
-      setCustomSettings(DEFAULT_SITE_SETTINGS);
-      setEditingProduct(null);
-      showToast('Catálogo e configurações restaurados para o padrão!');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Restaurar Catálogo Original',
+      message: 'Tem certeza que deseja restaurar o catálogo de produtos e configurações para o padrão original? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Restaurar Padrão',
+      cancelLabel: 'Voltar',
+      isDestructive: true,
+      onConfirm: () => {
+        onResetCatalog();
+        setCustomSettings(DEFAULT_SITE_SETTINGS);
+        setEditingProduct(null);
+        showToast('Catálogo e configurações restaurados para o padrão!');
+        setConfirmDialog(null);
+      },
+    });
   };
 
   if (!isOpen) return null;
@@ -449,13 +505,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         onChange={handleLogoUpload}
       />
 
-      {/* Floating Feedback Toast */}
-      {successToast && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-[#0F6E16] text-white px-5 py-3 rounded-xl shadow-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 border border-emerald-300 animate-in slide-in-from-top duration-150 max-w-[90%] text-center">
-          <svg className="w-5 h-5 text-[#FFD000] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </svg>
-          <span className="truncate">{successToast}</span>
+      {/* In-App Floating Notification Banner (Always internal system, never browser) */}
+      {systemNotification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[110] max-w-lg w-[92%] sm:w-auto animate-in slide-in-from-top-3 duration-200 pointer-events-none">
+          <div
+            className={`px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold flex items-center gap-3 border pointer-events-auto backdrop-blur-md ${
+              systemNotification.type === 'error'
+                ? 'bg-red-800/95 text-white border-red-500 shadow-red-950/40'
+                : systemNotification.type === 'warning'
+                ? 'bg-amber-800/95 text-white border-amber-500 shadow-amber-950/40'
+                : 'bg-[#0F6E16]/95 text-white border-emerald-400 shadow-emerald-950/40'
+            }`}
+          >
+            <span className="text-base sm:text-lg shrink-0">
+              {systemNotification.type === 'error'
+                ? '❌'
+                : systemNotification.type === 'warning'
+                ? '⚠️'
+                : '✅'}
+            </span>
+            <span className="leading-snug">{systemNotification.message}</span>
+            <button
+              type="button"
+              onClick={() => setSystemNotification(null)}
+              className="p-1 rounded-lg hover:bg-white/20 text-white/90 hover:text-white transition-colors cursor-pointer ml-auto shrink-0"
+              aria-label="Fechar notificação"
+            >
+              <CustomCloseCrossIcon className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -778,15 +856,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <span className="text-base">🎨</span>
                     <span>Personalização</span>
                   </div>
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                      activeTab === 'personalizacao'
-                        ? 'bg-white/20 text-white'
-                        : 'bg-emerald-50 text-emerald-800'
-                    }`}
-                  >
-                    Cores / Fontes
-                  </span>
                 </button>
               </div>
 
@@ -881,8 +950,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </button>
                 </div>
 
-                {/* Filter and search bar */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                {/* Filter, sort and search bar */}
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
                     {categories.map((c) => (
                       <button
@@ -900,14 +969,36 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     ))}
                   </div>
 
-                  <div className="relative">
-                    <input
-                      type="search"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Buscar por nome ou unidade..."
-                      className="w-full sm:w-72 px-3.5 py-2 text-xs bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16]"
-                    />
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    {/* Sort selector: A-Z (default), Z-A, Menor preço, Maior preço */}
+                    <div className="flex items-center gap-2 bg-white border border-[#BBD9BE] rounded-xl px-3 py-1.5 shadow-2xs">
+                      <span className="text-[11px] font-bold text-[#4A634E] whitespace-nowrap flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 text-[#0F6E16]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                        </svg>
+                        <span>Ordenar:</span>
+                      </span>
+                      <select
+                        value={adminSortBy}
+                        onChange={(e) => setAdminSortBy(e.target.value as ProductSortOption)}
+                        className="text-xs font-bold text-[#112A15] bg-transparent focus:outline-none cursor-pointer pr-1"
+                      >
+                        <option value="nome-asc">Ordem alfabética (A-Z)</option>
+                        <option value="nome-desc">Ordem alfabética (Z-A)</option>
+                        <option value="preco-asc">Preço: Menor para Maior</option>
+                        <option value="preco-desc">Preço: Maior para Menor</option>
+                      </select>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="search"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Buscar por nome ou unidade..."
+                        className="w-full sm:w-60 px-3.5 py-2 text-xs bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16]"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -981,10 +1072,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              if (window.confirm(`Deseja excluir "${prod.name}"?`)) {
-                                onDeleteProduct(prod.id);
-                                showToast('Produto excluído!');
-                              }
+                              setConfirmDialog({
+                                isOpen: true,
+                                title: 'Excluir Produto',
+                                message: `Deseja realmente excluir "${prod.name}" do catálogo da loja?`,
+                                confirmLabel: 'Excluir Produto',
+                                cancelLabel: 'Cancelar',
+                                isDestructive: true,
+                                onConfirm: () => {
+                                  onDeleteProduct(prod.id);
+                                  showToast(`Produto "${prod.name}" excluído!`);
+                                  setConfirmDialog(null);
+                                },
+                              });
                             }}
                             title="Excluir produto"
                             className="p-2 text-[#8A9E8D] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -1343,17 +1443,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (count > 0) {
-                                    if (!window.confirm(`A categoria "${cat.label}" possui ${count} produtos. Deseja excluí-la? Os produtos serão preservados no catálogo geral.`)) {
-                                      return;
-                                    }
-                                  } else {
-                                    if (!window.confirm(`Deseja realmente excluir a categoria "${cat.label}"?`)) {
-                                      return;
-                                    }
-                                  }
-                                  onDeleteCategory(cat.id);
-                                  showToast(`Categoria "${cat.label}" excluída com sucesso!`);
+                                  const msg = count > 0
+                                    ? `A categoria "${cat.label}" possui ${count} produtos. Deseja excluí-la? Os produtos vinculados serão preservados no catálogo geral.`
+                                    : `Deseja realmente excluir a categoria "${cat.label}"?`;
+                                  setConfirmDialog({
+                                    isOpen: true,
+                                    title: 'Excluir Categoria',
+                                    message: msg,
+                                    confirmLabel: 'Excluir Categoria',
+                                    cancelLabel: 'Cancelar',
+                                    isDestructive: true,
+                                    onConfirm: () => {
+                                      onDeleteCategory(cat.id);
+                                      showToast(`Categoria "${cat.label}" excluída com sucesso!`);
+                                      setConfirmDialog(null);
+                                    },
+                                  });
                                 }}
                                 className="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors cursor-pointer"
                                 title="Excluir categoria"
@@ -1428,13 +1533,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       key={b.id}
                       className="bg-white rounded-2xl border-2 border-[#D5E6D6] overflow-hidden shadow-xs hover:border-[#0F6E16] transition-all flex flex-col"
                     >
-                      <div className="relative aspect-[21/9] w-full bg-[#0A520F] overflow-hidden group">
+                      <div className="relative aspect-[21/9] w-full bg-zinc-900 overflow-hidden group">
                         <img
                           src={b.src}
                           alt={`Banner ${idx + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
+                          className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-102 block"
                         />
-                        <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-xs text-white text-xs font-bold font-mono">
+                        <span className="absolute top-2.5 left-2.5 z-20 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-xs text-white text-xs font-bold font-mono">
                           Foto #{idx + 1}
                         </span>
                       </div>
@@ -1626,7 +1731,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               onChange={(e) =>
                                 setCustomSettings({ ...customSettings, brandNameFirst: e.target.value })
                               }
-                              placeholder="Ex: Feirão"
+                              placeholder="Ex: Horti"
                               className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16]"
                             />
                           </div>
@@ -1640,7 +1745,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               onChange={(e) =>
                                 setCustomSettings({ ...customSettings, brandNameSecond: e.target.value })
                               }
-                              placeholder="Ex: Hortifruti"
+                              placeholder="Ex: Feirão"
                               className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16]"
                             />
                           </div>
@@ -1671,7 +1776,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     className="text-base font-black truncate text-[#112A15]"
                                     style={{ fontFamily: getBrandFontFamilyStyle(f.id) }}
                                   >
-                                    {customSettings.brandNameFirst || 'Feirão'} {customSettings.brandNameSecond || 'Hortifruti'}
+                                    {customSettings.brandNameFirst || 'Horti'} {customSettings.brandNameSecond || 'Feirão'}
                                   </div>
                                   <div className="mt-1 flex items-center justify-between">
                                     <span className="text-xs font-bold text-[#112A15]">{f.name}</span>
@@ -1763,7 +1868,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                   fontSize: customSettings.brandFontSize || '36px',
                                 }}
                               >
-                                {customSettings.brandNameFirst || 'Feirão'}
+                                {customSettings.brandNameFirst || 'Horti'}
                               </span>
                               <span
                                 className="font-black uppercase tracking-tight"
@@ -1772,7 +1877,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                   fontSize: customSettings.brandFontSize || '36px',
                                 }}
                               >
-                                {customSettings.brandNameSecond || 'Hortifruti'}
+                                {customSettings.brandNameSecond || 'Feirão'}
                               </span>
                             </div>
                           </div>
@@ -1886,6 +1991,78 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
             )}
           </main>
+        </div>
+      )}
+
+      {/* In-App Custom Confirmation Dialog (Always internal system, never browser confirm) */}
+      {confirmDialog?.isOpen && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          role="alertdialog"
+          aria-modal="true"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#D5E6D6] space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                  confirmDialog.isDestructive
+                    ? 'bg-red-50 text-red-600'
+                    : 'bg-emerald-50 text-[#0F6E16]'
+                }`}
+              >
+                {confirmDialog.isDestructive ? (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                )}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-[#112A15] font-display">
+                  {confirmDialog.title}
+                </h3>
+                <p className="text-[11px] text-[#66806A]">Aviso do sistema</p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#334A36] leading-relaxed">
+              {confirmDialog.message}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="min-h-[42px] px-4 py-2 rounded-xl border border-[#CBE5CD] text-[#1F4224] hover:bg-[#F0F7F1] text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+              >
+                {confirmDialog.cancelLabel || 'Cancelar'}
+              </button>
+              <button
+                type="button"
+                onClick={confirmDialog.onConfirm}
+                className={`min-h-[42px] px-5 py-2 rounded-xl text-white text-xs sm:text-sm font-bold transition-all shadow-sm cursor-pointer active:scale-95 ${
+                  confirmDialog.isDestructive
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-[#0F6E16] hover:bg-[#0A520F]'
+                }`}
+              >
+                {confirmDialog.confirmLabel || 'Confirmar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

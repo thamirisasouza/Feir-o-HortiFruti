@@ -510,7 +510,7 @@ export default function App() {
                           : undefined,
                       }}
                     >
-                      {siteSettings.brandNameFirst || 'Feirão'}
+                      {siteSettings.brandNameFirst || 'Horti'}
                     </span>
                     <span
                       className="font-black uppercase tracking-tight"
@@ -521,7 +521,7 @@ export default function App() {
                           : undefined,
                       }}
                     >
-                      {siteSettings.brandNameSecond || 'Hortifruti'}
+                      {siteSettings.brandNameSecond || 'Feirão'}
                     </span>
                   </div>
                 )}
@@ -593,13 +593,14 @@ export default function App() {
                 {banners.map((poster) => (
                   <div
                     key={poster.id}
-                    className="w-full shrink-0 relative h-[400px] overflow-hidden flex items-center justify-center bg-zinc-950"
+                    className="w-full shrink-0 relative h-[400px] overflow-hidden bg-zinc-950 select-none flex items-center justify-center"
                   >
+                    {/* Foto ajustada 100% ao tamanho exato do layout do banner */}
                     <img
                       src={poster.src}
                       alt={poster.alt || 'Banner Promocional'}
                       referrerPolicy="no-referrer"
-                      className="w-full h-[400px] object-cover object-center"
+                      className="w-full h-full object-cover object-center block"
                       style={{ height: '400px' }}
                     />
                   </div>
@@ -866,10 +867,10 @@ export default function App() {
                       }}
                     >
                       <span style={{ color: siteSettings.primaryButtonColor }}>
-                        {siteSettings.brandNameFirst || 'Feirão'}
+                        {siteSettings.brandNameFirst || 'Horti'}
                       </span>{' '}
                       <span style={{ color: siteSettings.accentButtonColor }}>
-                        {siteSettings.brandNameSecond || 'Hortifruti'}
+                        {siteSettings.brandNameSecond || 'Feirão'}
                       </span>
                     </span>
                   )}
@@ -1183,10 +1184,10 @@ export default function App() {
                     }}
                   >
                     <span style={{ color: siteSettings.primaryButtonColor }}>
-                      {siteSettings.brandNameFirst || 'Feirão'}
+                      {siteSettings.brandNameFirst || 'Horti'}
                     </span>{' '}
                     <span style={{ color: siteSettings.accentButtonColor }}>
-                      {siteSettings.brandNameSecond || 'Hortifruti'}
+                      {siteSettings.brandNameSecond || 'Feirão'}
                     </span>
                   </p>
                 )}

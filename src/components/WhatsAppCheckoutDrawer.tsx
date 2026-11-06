@@ -86,7 +86,7 @@ export const WhatsAppCheckoutDrawer: React.FC<WhatsAppCheckoutDrawerProps> = ({
     }).format(new Date());
 
     const lines: string[] = [
-      `Olá, equipe *Feirão Hortifruti*!`,
+      `Olá, equipe *HortiFeirão*!`,
       `Gostaria de finalizar meu pedido *#${orderSentCode || currentOrderReference}* (${brasiliaDateHora} - Horário de Brasília) e combinar a entrega:`,
       ``,
       `*ITENS SELECIONADOS NA FEIRA:*`,
@@ -207,7 +207,7 @@ export const WhatsAppCheckoutDrawer: React.FC<WhatsAppCheckoutDrawerProps> = ({
               Minha Cesta
             </h2>
             <p className="text-xs text-white/80">
-              Feirão Hortifruti · Finalização do Pedido
+              HortiFeirão · Finalização do Pedido
             </p>
           </div>
           <button

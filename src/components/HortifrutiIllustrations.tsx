@@ -5,12 +5,12 @@ export interface IconProps {
 }
 
 /**
- * Brand Logo for "Feirão Hortifruti" using the official logo asset
+ * Brand Logo for "HortiFeirão" using the official logo asset
  */
 export const FeiraoHortifrutiLogo: React.FC<IconProps> = ({ className = 'w-11 h-11' }) => (
   <img
-    src="/assets/aistudio/file_0000000083e4820ea22b0f81959d3438_19ea954d.png"
-    alt="Logo Feirão Hortifruti"
+    src="/images/hortifeirao_logo.jpg"
+    alt="Logo HortiFeirão"
     className={`rounded-full object-contain bg-white shadow-sm shrink-0 ${className}`}
   />
 );
