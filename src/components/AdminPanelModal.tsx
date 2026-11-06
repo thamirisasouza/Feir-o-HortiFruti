@@ -154,22 +154,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     });
   }, [products, selectedCatFilter, searchTerm]);
 
-  // Quick toggle Oferta on a product
-  const handleToggleOferta = (productId: string) => {
+  // Quick toggle Esgotado on a product
+  const handleToggleEsgotado = (productId: string) => {
     const prod = products.find((p) => p.id === productId);
     if (!prod) return;
-    const updated = { ...prod, isOferta: !prod.isOferta };
+    const updated = { ...prod, isEsgotado: !prod.isEsgotado };
     onSaveProduct(updated);
-    showToast(`"${prod.name}" ${updated.isOferta ? 'adicionado às Ofertas' : 'removido das Ofertas'}!`);
-  };
-
-  // Quick toggle Favorito on a product
-  const handleToggleFavorito = (productId: string) => {
-    const prod = products.find((p) => p.id === productId);
-    if (!prod) return;
-    const updated = { ...prod, isFavorito: !prod.isFavorito };
-    onSaveProduct(updated);
-    showToast(`"${prod.name}" ${updated.isFavorito ? 'adicionado aos Favoritos' : 'removido dos Favoritos'}!`);
+    showToast(`"${prod.name}" ${updated.isEsgotado ? 'marcado como ESGOTADO' : 'marcado como DISPONÍVEL'}!`);
   };
 
   // Handle adding a new category
@@ -852,17 +843,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <div className="pt-4 border-t border-[#EBF2EB] space-y-2">
               <button
                 type="button"
-                onClick={handleConfirmReset}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#66806A] hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Restaurar Catálogo Padrão</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={onClose}
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold text-[#1F4224] bg-[#F7FAF7] hover:bg-[#E6F2E7] border border-[#D5E6D6] rounded-xl transition-colors cursor-pointer"
               >
@@ -959,6 +939,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[#FFF2E8] text-[#FF6600] uppercase font-mono">
                                 {prod.unitType || 'kg'}
                               </span>
+                              {prod.isEsgotado && (
+                                <span className="px-2 py-0.5 text-[10px] font-black rounded bg-red-100 text-red-700 border border-red-200 uppercase">
+                                  Esgotado
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-[#4A634E] mt-0.5">
                               <span className="font-bold text-[#0F6E16] font-mono-tabular">
@@ -970,40 +955,25 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Quick Actions: Toggle Ofertas, Toggle Favoritos, Edit & Delete */}
+                        {/* Quick Actions: Toggle Esgotado, Edit & Delete */}
                         <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
                           <button
                             type="button"
-                            onClick={() => handleToggleOferta(prod.id)}
-                            className={`min-h-[36px] px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
-                              prod.isOferta
-                                ? 'bg-[#FF6600] text-white border-[#E05500] shadow-2xs'
-                                : 'bg-white text-[#8A5200] border-[#FFD0B0] hover:bg-[#FFF4EC]'
+                            onClick={() => handleToggleEsgotado(prod.id)}
+                            className={`min-h-[36px] px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                              prod.isEsgotado
+                                ? 'bg-red-600 text-white border-red-700 shadow-2xs hover:bg-red-700'
+                                : 'bg-white text-[#4A634E] hover:text-[#112A15] border-[#D5E6D6] hover:bg-gray-50'
                             }`}
-                            title={prod.isOferta ? 'Remover de Ofertas da tela inicial' : 'Colocar em Ofertas da tela inicial'}
+                            title={prod.isEsgotado ? 'Clique para marcar como em estoque' : 'Clique para marcar como esgotado'}
                           >
-                            <span>🔥</span>
-                            <span>Oferta</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleToggleFavorito(prod.id)}
-                            className={`min-h-[36px] px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
-                              prod.isFavorito
-                                ? 'bg-[#0F6E16] text-white border-[#0A520F] shadow-2xs'
-                                : 'bg-white text-[#1F4224] border-[#CBE5CD] hover:bg-[#E6F2E7]'
-                            }`}
-                            title={prod.isFavorito ? 'Remover de Favoritos da tela inicial' : 'Colocar em Favoritos da tela inicial'}
-                          >
-                            <span>⭐</span>
-                            <span>Favorito</span>
+                            <span>{prod.isEsgotado ? '🚫 Esgotado' : 'Em estoque'}</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => setEditingProduct(prod)}
-                            className="min-h-[36px] px-3.5 py-1 text-xs font-bold text-[#0F6E16] bg-[#E6F2E7] hover:bg-[#D5EBD6] rounded-lg transition-colors cursor-pointer"
+                            className="min-h-[36px] px-3.5 py-1 text-xs font-bold text-[#0F6E16] bg-[#E6F2E7] hover:bg-[#D5EBD6] rounded-xl transition-colors cursor-pointer"
                           >
                             Editar
                           </button>
@@ -1210,6 +1180,27 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         </span>
                         <span className="text-xs text-[#4A634E]">
                           Aparece no carrossel de favoritos da tela inicial
+                        </span>
+                      </div>
+                    </label>
+
+                    <label className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3 sm:col-span-2 ${
+                      editingProduct.isEsgotado
+                        ? 'bg-red-50 border-red-500 shadow-2xs'
+                        : 'bg-white border-[#D5E6D6]'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={!!editingProduct.isEsgotado}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, isEsgotado: e.target.checked })}
+                        className="w-5 h-5 text-red-600 rounded focus:ring-red-600 cursor-pointer"
+                      />
+                      <div>
+                        <span className="block text-sm font-bold text-[#112A15]">
+                          🚫 Produto Esgotado / Fora de Estoque
+                        </span>
+                        <span className="text-xs text-[#4A634E]">
+                          Exibe aviso de esgotado no catálogo e desativa a adição à cesta pelos clientes
                         </span>
                       </div>
                     </label>

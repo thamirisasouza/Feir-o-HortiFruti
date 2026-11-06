@@ -59,6 +59,9 @@ export default function App() {
 
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('todos');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterOnlyInStock, setFilterOnlyInStock] = useState<boolean>(false);
+  const [filterOnlyOfertas, setFilterOnlyOfertas] = useState<boolean>(false);
+  const [filterSortBy, setFilterSortBy] = useState<'padrao' | 'preco-menor' | 'preco-maior' | 'nome'>('padrao');
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
 
@@ -226,9 +229,9 @@ export default function App() {
     setBannerIndex(0);
   };
 
-  // Filtered products in store mode
+  // Filtered products in store mode with category, stock, ofertas and sorting
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    let result = products.filter((product) => {
       const matchesCategory =
         selectedCategory === 'todos' || product.categoryId === selectedCategory;
       const q = searchQuery.trim().toLowerCase();
@@ -237,9 +240,21 @@ export default function App() {
         product.name.toLowerCase().includes(q) ||
         product.categoryLabel.toLowerCase().includes(q) ||
         product.unitLabel.toLowerCase().includes(q);
-      return matchesCategory && matchesSearch;
+      const matchesInStock = !filterOnlyInStock || !product.isEsgotado;
+      const matchesOfertas = !filterOnlyOfertas || !!product.isOferta;
+      return matchesCategory && matchesSearch && matchesInStock && matchesOfertas;
     });
-  }, [products, selectedCategory, searchQuery]);
+
+    if (filterSortBy === 'preco-menor') {
+      result = [...result].sort((a, b) => a.price - b.price);
+    } else if (filterSortBy === 'preco-maior') {
+      result = [...result].sort((a, b) => b.price - a.price);
+    } else if (filterSortBy === 'nome') {
+      result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return result;
+  }, [products, selectedCategory, searchQuery, filterOnlyInStock, filterOnlyOfertas, filterSortBy]);
 
   // Curated lists for Home sections with admin selection support
   const ofertasImperdiveis = useMemo(() => {
@@ -362,7 +377,15 @@ export default function App() {
               </span>
             )}
 
-            {qtyInCart > 0 && (
+            {product.isEsgotado ? (
+              <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center z-10">
+                <span className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[11px] font-black uppercase tracking-wider shadow-md">
+                  Esgotado
+                </span>
+              </div>
+            ) : null}
+
+            {qtyInCart > 0 && !product.isEsgotado && (
               <span
                 className="absolute top-2 right-2 min-w-[22px] h-[22px] px-1.5 rounded-full text-white text-[11px] font-mono-tabular font-bold flex items-center justify-center shadow-xs border border-white"
                 style={{ backgroundColor: siteSettings.accentButtonColor }}
@@ -396,7 +419,11 @@ export default function App() {
         </div>
 
         <div className="p-2.5 pt-2 sm:px-4 sm:pb-4 sm:pt-2">
-          {qtyInCart > 0 ? (
+          {product.isEsgotado ? (
+            <div className="w-full min-h-[36px] sm:min-h-[40px] inline-flex items-center justify-center px-3 py-2 text-xs font-bold text-gray-400 bg-gray-100 rounded-xl border border-gray-200 cursor-not-allowed">
+              <span>Esgotado</span>
+            </div>
+          ) : qtyInCart > 0 ? (
             <div
               className="w-full flex items-center justify-between bg-[#F7FAF7] px-1.5 py-1 rounded-xl border-2"
               style={{ borderColor: siteSettings.accentButtonColor }}
@@ -566,13 +593,14 @@ export default function App() {
                 {banners.map((poster) => (
                   <div
                     key={poster.id}
-                    className="w-full shrink-0 relative aspect-[21/9] sm:aspect-[24/8] md:aspect-[3/1] max-h-[380px] overflow-hidden flex items-center justify-center bg-zinc-950"
+                    className="w-full shrink-0 relative h-[400px] overflow-hidden flex items-center justify-center bg-zinc-950"
                   >
                     <img
                       src={poster.src}
                       alt={poster.alt || 'Banner Promocional'}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-[400px] object-cover object-center"
+                      style={{ height: '400px' }}
                     />
                   </div>
                 ))}
@@ -632,7 +660,11 @@ export default function App() {
       {currentView === 'home' && (
         <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 sm:py-10 space-y-10 sm:space-y-14">
           {/* DEPARTAMENTOS DA FEIRA: Centralizado, Solto na seção, sem caixa de card, ícones redondos */}
-          <section aria-labelledby="departamentos-heading" className="space-y-5 text-center">
+          <section
+            aria-labelledby="departamentos-heading"
+            className="space-y-5 text-center"
+            style={{ minHeight: '210.887px' }}
+          >
             <div className="space-y-1 max-w-xl mx-auto">
               <h3 id="departamentos-heading" className="text-xl sm:text-2xl font-black font-display text-[#112A15] tracking-tight">
                 Departamentos da Feira
@@ -800,11 +832,12 @@ export default function App() {
       )}
 
       {/* VIEW 2: MODO CATÁLOGO / PRODUTOS (STORE VIEW) - NAV E BANNER ESCONDIDOS */}
+      {/* VIEW 2: MODO CATÁLOGO / PRODUTOS (STORE VIEW) - LAYOUT CLEAN DE FUNDO BRANCO COM CATEGORIAS E FILTROS NA LATERAL ESQUERDA */}
       {currentView === 'store' && (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-white">
           {/* Dedicated Store Bar (Nav and Banner are hidden!) */}
-          <div className="sticky top-0 z-30 w-full bg-white border-b-2 border-[#D5E6D6] shadow-xs">
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4">
+          <div className="sticky top-0 z-30 w-full bg-white border-b border-[#E5EFE6] shadow-xs">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4">
               <div className="flex items-center justify-between sm:justify-start gap-3">
                 <button
                   type="button"
@@ -869,7 +902,7 @@ export default function App() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar produto..."
-                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#F7FAF7] border border-[#BBD9BE] rounded-xl text-[#112A15] placeholder:text-[#66806A] focus:outline-none focus:border-[#FF6600]"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-[#F7FAF7] border border-[#BBD9BE] rounded-xl text-[#112A15] placeholder:text-[#66806A] focus:outline-none focus:border-[#FF6600]"
                   />
                 </div>
 
@@ -877,7 +910,7 @@ export default function App() {
                   type="button"
                   onClick={() => setIsDrawerOpen(true)}
                   style={{ backgroundColor: siteSettings.primaryButtonColor }}
-                  className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl hover:brightness-110 text-white text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
+                  className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl hover:brightness-110 text-white text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
                 >
                   <CustomWovenBasketIcon className="w-4 h-4 text-[#FFD000]" />
                   <span>Minha Cesta ({totalItemsInCart})</span>
@@ -889,84 +922,214 @@ export default function App() {
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Category Buttons Bar for Navigation ("navegar somente pelos botões de categoria") */}
-            <div className="bg-[#F0F7F1] border-t border-[#D5E6D6] px-3 sm:px-6 py-2">
-              <div className="max-w-7xl mx-auto flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                <span className="text-[11px] font-bold text-[#4A634E] uppercase tracking-wider mr-1 hidden sm:inline shrink-0">
-                  Categorias:
-                </span>
+          {/* MAIN STORE CONTAINER (2-COLUMNS: SIDEBAR ON LEFT + PRODUCTS ON RIGHT) */}
+          <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 sm:py-8 flex-1 flex flex-col md:flex-row gap-6 lg:gap-8 items-start">
+            {/* ASIDE (MENU LATERAL À ESQUERDA COM CATEGORIAS E FILTROS) */}
+            <aside className="w-full md:w-64 lg:w-72 shrink-0 space-y-5 bg-white border border-[#E5EFE6] rounded-2xl p-4 sm:p-5 shadow-2xs md:sticky md:top-24">
+              {/* Header do Menu Lateral */}
+              <div className="border-b border-[#EBF2EB] pb-3">
+                <h3 className="text-sm font-bold text-[#112A15] font-display flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#0F6E16]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  <span>Categorias da Feira</span>
+                </h3>
+                <p className="text-[11px] text-[#66806A] mt-0.5">
+                  Navegue pelos departamentos de produtos
+                </p>
+              </div>
+
+              {/* Vertical Category Links */}
+              <div className="space-y-1">
                 {categories.map((cat) => {
                   const active = selectedCategory === cat.id;
+                  const count =
+                    cat.id === 'todos'
+                      ? products.length
+                      : products.filter((p) => p.categoryId === cat.id).length;
+
                   return (
                     <button
                       key={cat.id}
                       type="button"
                       onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                         active
                           ? 'text-white shadow-xs'
-                          : 'bg-white text-[#1F4224] hover:bg-[#E0EDE1] border border-[#CBE5CD]'
+                          : 'text-[#1F4224] hover:bg-[#F7FAF7] hover:text-[#0F6E16]'
                       }`}
                       style={{
-                        backgroundColor: active ? siteSettings.accentButtonColor : undefined,
+                        backgroundColor: active ? siteSettings.primaryButtonColor : undefined,
                       }}
                     >
-                      {cat.label}
+                      <div className="flex items-center gap-2 truncate">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${active ? 'bg-white' : 'bg-[#0F6E16]'}`} />
+                        <span className="truncate">{cat.label}</span>
+                      </div>
+                      <span
+                        className={`text-[11px] font-mono-tabular px-2 py-0.5 rounded-full shrink-0 ${
+                          active ? 'bg-white/20 text-white' : 'bg-[#E6F2E7] text-[#0F6E16]'
+                        }`}
+                      >
+                        {count}
+                      </span>
                     </button>
                   );
                 })}
               </div>
-            </div>
-          </div>
 
-          {/* Product Grid Area in Catalog */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-6 py-4 sm:py-8 space-y-4">
-            <div className="flex items-center justify-between text-xs text-[#4A634E] px-1">
-              <span>
-                Exibindo <strong>{filteredProducts.length}</strong> produtos na categoria{' '}
-                <strong style={{ color: siteSettings.primaryButtonColor }}>
-                  {categories.find((c) => c.id === selectedCategory)?.label || selectedCategory}
-                </strong>
-              </span>
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="text-xs hover:underline font-bold"
-                  style={{ color: siteSettings.accentButtonColor }}
+              {/* Filtros Rápidos */}
+              <div className="border-t border-[#EBF2EB] pt-4 space-y-3">
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-[#66806A]">
+                  Filtros Adicionais
+                </span>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2.5 text-xs font-semibold text-[#1F4224] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filterOnlyInStock}
+                      onChange={(e) => setFilterOnlyInStock(e.target.checked)}
+                      className="w-4 h-4 text-[#0F6E16] rounded focus:ring-[#0F6E16] cursor-pointer"
+                    />
+                    <span>Apenas itens em estoque</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 text-xs font-semibold text-[#1F4224] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filterOnlyOfertas}
+                      onChange={(e) => setFilterOnlyOfertas(e.target.checked)}
+                      className="w-4 h-4 text-[#FF6600] rounded focus:ring-[#FF6600] cursor-pointer"
+                    />
+                    <span>Apenas Ofertas 🔥</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Ordenação */}
+              <div className="border-t border-[#EBF2EB] pt-4 space-y-2">
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-[#66806A]">
+                  Ordenar por
+                </span>
+                <select
+                  value={filterSortBy}
+                  onChange={(e) => setFilterSortBy(e.target.value as any)}
+                  className="w-full px-3 py-2 text-xs bg-[#F7FAF7] border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16] cursor-pointer"
                 >
-                  Limpar busca "{searchQuery}"
-                </button>
+                  <option value="padrao">Destaques da Feira</option>
+                  <option value="preco-menor">Menor Preço</option>
+                  <option value="preco-maior">Maior Preço</option>
+                  <option value="nome">Nome (A - Z)</option>
+                </select>
+              </div>
+
+              {/* Limpar Filtros Button */}
+              {(selectedCategory !== 'todos' || searchQuery || filterOnlyInStock || filterOnlyOfertas || filterSortBy !== 'padrao') && (
+                <div className="pt-2 border-t border-[#EBF2EB]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('todos');
+                      setSearchQuery('');
+                      setFilterOnlyInStock(false);
+                      setFilterOnlyOfertas(false);
+                      setFilterSortBy('padrao');
+                    }}
+                    className="w-full py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer text-center"
+                  >
+                    Limpar Todos os Filtros
+                  </button>
+                </div>
               )}
-            </div>
+            </aside>
 
-            {filteredProducts.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-[#D5E6D6] p-8 sm:p-12 text-center space-y-3">
-                <h2 className="text-base sm:text-lg font-bold text-[#112A15] font-display">
-                  Nenhum item encontrado para essa busca
-                </h2>
-                <p className="text-xs sm:text-sm text-[#4A634E]">
-                  Tente buscar por outro termo ou mude a categoria acima.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory('todos');
-                    setSearchQuery('');
-                  }}
-                  style={{ backgroundColor: siteSettings.primaryButtonColor }}
-                  className="px-4 py-2 text-xs font-semibold text-white hover:brightness-110 rounded-xl cursor-pointer"
-                >
-                  Mostrar Todos os Produtos
-                </button>
+            {/* PRODUCT GRID AREA (LADO DIREITO) */}
+            <main className="flex-1 min-w-0 w-full space-y-4">
+              {/* Header da Área de Produtos */}
+              <div className="bg-[#F7FAF7] p-3.5 sm:p-4 rounded-2xl border border-[#E5EFE6] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-[#112A15] font-display">
+                    {categories.find((c) => c.id === selectedCategory)?.label || 'Produtos'}
+                  </h2>
+                  <p className="text-xs text-[#4A634E]">
+                    Exibindo <strong>{filteredProducts.length}</strong> {filteredProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+                  </p>
+                </div>
+
+                {/* Filtros ativos pills */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {searchQuery && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-[#CBE5CD] text-[11px] font-semibold text-[#112A15]">
+                      <span>Busca: "{searchQuery}"</span>
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="text-red-500 hover:text-red-700 ml-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filterOnlyInStock && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-[#CBE5CD] text-[11px] font-semibold text-[#0F6E16]">
+                      <span>Em Estoque</span>
+                      <button
+                        type="button"
+                        onClick={() => setFilterOnlyInStock(false)}
+                        className="text-red-500 hover:text-red-700 ml-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filterOnlyOfertas && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-[#CBE5CD] text-[11px] font-semibold text-[#FF6600]">
+                      <span>Ofertas 🔥</span>
+                      <button
+                        type="button"
+                        onClick={() => setFilterOnlyOfertas(false)}
+                        className="text-red-500 hover:text-red-700 ml-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
-                {filteredProducts.map((product) => renderProductCard(product, undefined, false))}
-              </div>
-            )}
-          </main>
+
+              {filteredProducts.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-[#E5EFE6] p-8 sm:p-12 text-center space-y-3">
+                  <h3 className="text-base sm:text-lg font-bold text-[#112A15] font-display">
+                    Nenhum produto encontrado com os filtros selecionados
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#4A634E]">
+                    Tente selecionar outra categoria ou desmarcar os filtros na barra lateral.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('todos');
+                      setSearchQuery('');
+                      setFilterOnlyInStock(false);
+                      setFilterOnlyOfertas(false);
+                      setFilterSortBy('padrao');
+                    }}
+                    style={{ backgroundColor: siteSettings.primaryButtonColor }}
+                    className="px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 rounded-xl cursor-pointer shadow-xs"
+                  >
+                    Mostrar Todos os Produtos
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-2.5 sm:gap-5">
+                  {filteredProducts.map((product) => renderProductCard(product, undefined, false))}
+                </div>
+              )}
+            </main>
+          </div>
         </div>
       )}
 

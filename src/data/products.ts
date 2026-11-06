@@ -21,6 +21,7 @@ export interface ProductItem {
   nutritionalHighlight?: string;
   isOferta?: boolean;
   isFavorito?: boolean;
+  isEsgotado?: boolean;
 }
 
 export const CATEGORIES: CategoryItem[] = [
