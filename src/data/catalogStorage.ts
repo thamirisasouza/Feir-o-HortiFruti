@@ -95,7 +95,14 @@ export function getStoredProducts(): ProductItem[] {
     if (!raw) return PRODUCTS;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      return parsed.map((item: any) => {
+        // Strip residual origin from previous storage
+        const { origin, ...rest } = item;
+        return {
+          ...rest,
+          description: rest.description || rest.nutritionalHighlight || '',
+        } as ProductItem;
+      });
     }
   } catch (err) {
     console.error('Erro ao ler produtos do localStorage:', err);

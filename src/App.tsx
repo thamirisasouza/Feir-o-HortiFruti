@@ -371,12 +371,6 @@ export default function App() {
               )}
             </div>
 
-            {product.unitType && (
-              <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[9px] font-mono font-bold uppercase text-white shadow-2xs">
-                {product.unitType}
-              </span>
-            )}
-
             {product.isEsgotado ? (
               <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center z-10">
                 <span className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[11px] font-black uppercase tracking-wider shadow-md">

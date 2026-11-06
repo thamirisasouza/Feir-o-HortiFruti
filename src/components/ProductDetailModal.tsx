@@ -56,8 +56,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         <div className="bg-[#E8F6E9] p-4 sm:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-[#CBE5CD]">
           <div className="text-xs font-medium text-[#1F4224]">
             <span className="text-[#FF6600] font-bold uppercase tracking-wider">{product.categoryLabel}</span>
-            <span className="mx-1.5" aria-hidden="true">·</span>
-            <span>{product.origin}</span>
           </div>
 
           <div className="my-3 sm:my-5 aspect-[16/10] sm:aspect-[4/3] w-full rounded-xl overflow-hidden border-2 border-[#FF6600] bg-white shadow-sm">
@@ -65,7 +63,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
 
           <p className="text-xs text-[#1F4224] leading-relaxed">
-            {product.nutritionalHighlight}
+            {product.description || product.nutritionalHighlight || 'Produto fresco e selecionado com carinho.'}
           </p>
         </div>
 

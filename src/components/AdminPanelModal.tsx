@@ -255,6 +255,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       unitLabel: '1kg',
       price: 9.90,
       artId: 'morango',
+      description: 'Produto fresco e selecionado a mão.',
       nutritionalHighlight: 'Produto fresco e selecionado a mão.',
       isOferta: false,
       isFavorito: false,
@@ -329,6 +330,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       categoryLabel: cat ? cat.label : editingProduct.categoryId,
       unitLabel: editingProduct.unitLabel.trim() || '1kg',
       artId: editingProduct.artId || 'morango',
+      description: (editingProduct.description ?? editingProduct.nutritionalHighlight ?? '').trim(),
+      nutritionalHighlight: (editingProduct.description ?? editingProduct.nutritionalHighlight ?? '').trim(),
     };
 
     onSaveProduct(updated);
@@ -962,9 +965,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[#E6F2E7] text-[#0F6E16] uppercase">
                                 {prod.categoryLabel}
                               </span>
-                              <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[#FFF2E8] text-[#FF6600] uppercase font-mono">
-                                {prod.unitType || 'kg'}
-                              </span>
                               {prod.isEsgotado && (
                                 <span className="px-2 py-0.5 text-[10px] font-black rounded bg-red-100 text-red-700 border border-red-200 uppercase">
                                   Esgotado
@@ -1173,6 +1173,23 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16]"
                       />
                     </div>
+                  </div>
+
+                  {/* Product Description */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1F4224] mb-1">
+                      Descrição do Produto
+                    </label>
+                    <textarea
+                      value={editingProduct.description ?? editingProduct.nutritionalHighlight ?? ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                      placeholder="Escreva detalhes sobre o produto, frescor, sabor ou dicas de consumo..."
+                      rows={3}
+                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16] resize-y"
+                    />
+                    <span className="text-[11px] text-[#4A634E] mt-1 block">
+                      Essa descrição será exibida aos clientes ao clicarem no produto para ver detalhes.
+                    </span>
                   </div>
 
                   {/* Oferta and Favorito Toggles */}
