@@ -54,6 +54,8 @@ export interface SiteCustomization {
   brandNameSecond: string;
   primaryButtonColor: string; // e.g. '#0F6E16'
   accentButtonColor: string;  // e.g. '#FF6600'
+  brandFontSize?: string;     // e.g. '36px'
+  brandFontFamily?: string;   // 'display' | 'sans' | 'serif' | 'rounded' | 'impact' | 'cursive'
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteCustomization = {
@@ -63,7 +65,27 @@ export const DEFAULT_SITE_SETTINGS: SiteCustomization = {
   brandNameSecond: 'Hortifruti',
   primaryButtonColor: '#0F6E16',
   accentButtonColor: '#FF6600',
+  brandFontSize: '36px',
+  brandFontFamily: 'display',
 };
+
+export function getBrandFontFamilyStyle(fontFamily?: string): string {
+  switch (fontFamily) {
+    case 'sans':
+      return 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    case 'serif':
+      return 'Georgia, Cambria, "Times New Roman", Times, serif';
+    case 'rounded':
+      return '"Nunito", "Quicksand", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", sans-serif';
+    case 'impact':
+      return 'Impact, "Arial Black", "Trebuchet MS", sans-serif';
+    case 'cursive':
+      return '"Caveat", "Brush Script MT", "Segoe Script", cursive';
+    case 'display':
+    default:
+      return 'inherit';
+  }
+}
 
 export function getStoredProducts(): ProductItem[] {
   try {

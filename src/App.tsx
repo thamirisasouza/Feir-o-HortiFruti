@@ -3,6 +3,7 @@ import { CategoryId, CategoryItem, ProductItem } from './data/products';
 import {
   BannerItem,
   SiteCustomization,
+  getBrandFontFamilyStyle,
   getStoredBanners,
   getStoredCategories,
   getStoredProducts,
@@ -163,6 +164,21 @@ export default function App() {
     });
   };
 
+  const handleEditCategory = (categoryId: string, newLabel: string) => {
+    setCategories((prev) => {
+      const next = prev.map((c) => (c.id === categoryId ? { ...c, label: newLabel } : c));
+      saveStoredCategories(next);
+      return next;
+    });
+    setProducts((prev) => {
+      const next = prev.map((p) =>
+        p.categoryId === categoryId ? { ...p, categoryLabel: newLabel } : p
+      );
+      saveStoredProducts(next);
+      return next;
+    });
+  };
+
   const handleDeleteCategory = (categoryId: string) => {
     setCategories((prev) => {
       const next = prev.filter((c) => c.id !== categoryId);
@@ -172,6 +188,19 @@ export default function App() {
     if (selectedCategory === categoryId) {
       setSelectedCategory('todos');
     }
+    const fallbackCat = categories.find((c) => c.id !== 'todos' && c.id !== categoryId) || {
+      id: 'geral',
+      label: 'Geral',
+    };
+    setProducts((prev) => {
+      const next = prev.map((p) =>
+        p.categoryId === categoryId
+          ? { ...p, categoryId: fallbackCat.id, categoryLabel: fallbackCat.label }
+          : p
+      );
+      saveStoredProducts(next);
+      return next;
+    });
   };
 
   const handleSaveBanners = (updatedBanners: BannerItem[]) => {
@@ -434,21 +463,36 @@ export default function App() {
                 <img
                   src={siteSettings.logoUrl}
                   alt="Logo"
-                  className="w-[200px] h-[55px] object-contain shrink-0 transition-transform group-hover:scale-105 drop-shadow-xs"
+                  className="w-[150px] h-[60px] object-contain shrink-0 transition-transform group-hover:scale-105 drop-shadow-xs"
                 />
 
                 {/* Nome lado a lado sem pular linha ou somente logo conforme configurado */}
                 {siteSettings.showBrandName && (
-                  <div className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap leading-none">
+                  <div
+                    className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap leading-none transition-all"
+                    style={{
+                      fontFamily: getBrandFontFamilyStyle(siteSettings.brandFontFamily),
+                    }}
+                  >
                     <span
-                      className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight"
-                      style={{ color: siteSettings.primaryButtonColor }}
+                      className="font-black uppercase tracking-tight"
+                      style={{
+                        color: siteSettings.primaryButtonColor,
+                        fontSize: siteSettings.brandFontSize
+                          ? `clamp(20px, 4.5vw, ${siteSettings.brandFontSize})`
+                          : undefined,
+                      }}
                     >
                       {siteSettings.brandNameFirst || 'Feirão'}
                     </span>
                     <span
-                      className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight"
-                      style={{ color: siteSettings.accentButtonColor }}
+                      className="font-black uppercase tracking-tight"
+                      style={{
+                        color: siteSettings.accentButtonColor,
+                        fontSize: siteSettings.brandFontSize
+                          ? `clamp(20px, 4.5vw, ${siteSettings.brandFontSize})`
+                          : undefined,
+                      }}
                     >
                       {siteSettings.brandNameSecond || 'Hortifruti'}
                     </span>
@@ -765,14 +809,13 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setCurrentView('home')}
-                  aria-label="Voltar ao Início"
-                  title="Voltar ao Início"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-[#E6F2E7] hover:bg-[#0F6E16] text-[#0F6E16] hover:text-white text-xs font-bold transition-all border border-[#CBE5CD] cursor-pointer shadow-2xs shrink-0"
+                  aria-label="Voltar ao início"
+                  title="Voltar ao início"
+                  className="inline-flex items-center justify-center p-2 sm:p-2.5 rounded-xl bg-[#E6F2E7] hover:bg-[#0F6E16] text-[#0F6E16] hover:text-white transition-all border border-[#CBE5CD] cursor-pointer shadow-2xs shrink-0"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
-                  <span className="hidden sm:inline">Voltar ao Início</span>
                 </button>
 
                 <div className="flex items-center gap-2 whitespace-nowrap">
@@ -783,7 +826,12 @@ export default function App() {
                     className="h-[46px] w-[100px] object-contain shrink-0"
                   />
                   {siteSettings.showBrandName && (
-                    <span className="text-sm sm:text-base font-extrabold font-display whitespace-nowrap">
+                    <span
+                      className="text-sm sm:text-base font-extrabold whitespace-nowrap"
+                      style={{
+                        fontFamily: getBrandFontFamilyStyle(siteSettings.brandFontFamily),
+                      }}
+                    >
                       <span style={{ color: siteSettings.primaryButtonColor }}>
                         {siteSettings.brandNameFirst || 'Feirão'}
                       </span>{' '}
@@ -965,7 +1013,12 @@ export default function App() {
                   className="h-12 sm:h-14 w-auto max-w-[150px] object-contain shrink-0"
                 />
                 {siteSettings.showBrandName && (
-                  <p className="text-xl sm:text-2xl font-black font-display whitespace-nowrap leading-tight">
+                  <p
+                    className="text-xl sm:text-2xl font-black whitespace-nowrap leading-tight"
+                    style={{
+                      fontFamily: getBrandFontFamilyStyle(siteSettings.brandFontFamily),
+                    }}
+                  >
                     <span style={{ color: siteSettings.primaryButtonColor }}>
                       {siteSettings.brandNameFirst || 'Feirão'}
                     </span>{' '}
@@ -1098,6 +1151,7 @@ export default function App() {
         onSaveProduct={handleSaveProduct}
         onDeleteProduct={handleDeleteProduct}
         onAddCategory={handleAddCategory}
+        onEditCategory={handleEditCategory}
         onDeleteCategory={handleDeleteCategory}
         onSaveBanners={handleSaveBanners}
         onSaveSiteSettings={handleSaveSiteSettings}
