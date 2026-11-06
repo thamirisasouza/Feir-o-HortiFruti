@@ -841,54 +841,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </div>
                 </button>
               </div>
-
-              {/* Contextual Action CTA inside Sidebar */}
-              <div className="pt-2">
-                {activeTab === 'produtos' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleStartNewProduct();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full min-h-[42px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-[#FF6600] hover:bg-[#E05500] rounded-xl transition-all shadow-sm cursor-pointer active:scale-95"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Novo Produto</span>
-                  </button>
-                )}
-
-                {activeTab === 'categorias' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNewCatModal(true);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full min-h-[42px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-[#0F6E16] bg-[#E6F2E7] hover:bg-[#D4EBD6] border border-[#CBE5CD] rounded-xl transition-colors cursor-pointer"
-                  >
-                    <span>+ Nova Categoria</span>
-                  </button>
-                )}
-
-                {activeTab === 'banners' && banners.length < 5 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      newBannerUploadInputRef.current?.click();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full min-h-[42px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-[#FF6600] hover:bg-[#E05500] rounded-xl transition-all shadow-sm cursor-pointer active:scale-95"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Adicionar Banner ({banners.length}/5)</span>
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* Sidebar Footer Controls */}
@@ -1508,32 +1460,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Status de Padrão Permanente */}
-                  <div className="p-3.5 bg-[#EFF7F0] rounded-xl border border-[#BBD9BE] flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-lg bg-[#0F6E16] text-white flex items-center justify-center font-bold text-sm shrink-0">
-                        ✓
-                      </span>
-                      <div>
-                        <h5 className="text-xs font-bold text-[#112A15]">
-                          Banners e Atualizações Definidos como Padrão Permanente
-                        </h5>
-                        <p className="text-[11px] text-[#4A634E]">
-                          Todas as fotos, proporções e ordem dos banners são salvas e mantidas automaticamente como padrão contínuo da loja.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSaveBanners(banners);
-                        showNotification('Banners e configurações salvos como padrão permanente!', 'success');
-                      }}
-                      className="px-3.5 py-1.5 rounded-lg bg-[#0F6E16] text-white text-xs font-bold hover:bg-[#0A520F] transition-all cursor-pointer shadow-2xs active:scale-95"
-                    >
-                      Salvar como Padrão Oficial
-                    </button>
-                  </div>
                 </div>
 
                 {/* Banners Image Grid */}
