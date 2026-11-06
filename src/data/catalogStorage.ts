@@ -3,7 +3,9 @@ import { CATEGORIES, CategoryItem, PRODUCTS, ProductItem, UnitType } from './pro
 const PRODUCTS_STORAGE_KEY = 'feirao_products_v3';
 const CATEGORIES_STORAGE_KEY = 'feirao_categories_v3';
 const BANNERS_STORAGE_KEY = 'feirao_banners_v3';
+const BANNERS_PERMANENT_DEFAULT_KEY = 'hortifeirao_banners_permanent_default_v1';
 const SITE_SETTINGS_STORAGE_KEY = 'feirao_site_settings_v3';
+const SITE_SETTINGS_PERMANENT_DEFAULT_KEY = 'hortifeirao_site_settings_permanent_default_v1';
 const ADMIN_AUTH_KEY = 'feirao_admin_auth_v2';
 
 export const ADMIN_TEST_CREDENTIALS = {
@@ -137,10 +139,16 @@ export function saveStoredCategories(categories: CategoryItem[]): void {
 
 export function getStoredBanners(): BannerItem[] {
   try {
-    const raw = localStorage.getItem(BANNERS_STORAGE_KEY);
+    const raw =
+      localStorage.getItem(BANNERS_STORAGE_KEY) ||
+      localStorage.getItem(BANNERS_PERMANENT_DEFAULT_KEY);
     if (!raw) return DEFAULT_BANNERS;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
+      try {
+        localStorage.setItem(BANNERS_STORAGE_KEY, raw);
+        localStorage.setItem(BANNERS_PERMANENT_DEFAULT_KEY, raw);
+      } catch {}
       return parsed.slice(0, 5); // Max 5 banners
     }
   } catch (err) {
@@ -151,7 +159,9 @@ export function getStoredBanners(): BannerItem[] {
 
 export function saveStoredBanners(banners: BannerItem[]): void {
   try {
-    localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(banners.slice(0, 5)));
+    const serialized = JSON.stringify(banners.slice(0, 5));
+    localStorage.setItem(BANNERS_STORAGE_KEY, serialized);
+    localStorage.setItem(BANNERS_PERMANENT_DEFAULT_KEY, serialized);
   } catch (err) {
     console.error('Erro ao salvar banners no localStorage:', err);
   }
@@ -159,23 +169,24 @@ export function saveStoredBanners(banners: BannerItem[]): void {
 
 export function getStoredSiteSettings(): SiteCustomization {
   try {
-    const raw = localStorage.getItem(SITE_SETTINGS_STORAGE_KEY);
+    const raw =
+      localStorage.getItem(SITE_SETTINGS_STORAGE_KEY) ||
+      localStorage.getItem(SITE_SETTINGS_PERMANENT_DEFAULT_KEY);
     if (!raw) return DEFAULT_SITE_SETTINGS;
     const parsed = JSON.parse(raw);
     const settings = { ...DEFAULT_SITE_SETTINGS, ...parsed };
     if (settings.brandNameFirst === 'Feirão' && settings.brandNameSecond === 'Hortifruti') {
       settings.brandNameFirst = 'Horti';
       settings.brandNameSecond = 'Feirão';
-      try {
-        localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-      } catch {}
     }
     if (!settings.logoUrl || settings.logoUrl.includes('file_0000000083e4820ea22b0f81959d3438')) {
       settings.logoUrl = '/images/hortifeirao_logo.jpg';
-      try {
-        localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-      } catch {}
     }
+    try {
+      const serialized = JSON.stringify(settings);
+      localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, serialized);
+      localStorage.setItem(SITE_SETTINGS_PERMANENT_DEFAULT_KEY, serialized);
+    } catch {}
     return settings;
   } catch (err) {
     console.error('Erro ao ler configurações do site:', err);
@@ -185,7 +196,9 @@ export function getStoredSiteSettings(): SiteCustomization {
 
 export function saveStoredSiteSettings(settings: SiteCustomization): void {
   try {
-    localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    const serialized = JSON.stringify(settings);
+    localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, serialized);
+    localStorage.setItem(SITE_SETTINGS_PERMANENT_DEFAULT_KEY, serialized);
   } catch (err) {
     console.error('Erro ao salvar configurações do site:', err);
   }
@@ -197,19 +210,12 @@ export function resetCatalogToDefault(): {
   banners: BannerItem[];
   siteSettings: SiteCustomization;
 } {
-  try {
-    localStorage.removeItem(PRODUCTS_STORAGE_KEY);
-    localStorage.removeItem(CATEGORIES_STORAGE_KEY);
-    localStorage.removeItem(BANNERS_STORAGE_KEY);
-    localStorage.removeItem(SITE_SETTINGS_STORAGE_KEY);
-  } catch (err) {
-    console.error('Erro ao resetar catálogo:', err);
-  }
+  // Sempre preserva os banners e as personalizações ativas como padrão definitivo
   return {
     products: PRODUCTS,
     categories: CATEGORIES,
-    banners: DEFAULT_BANNERS,
-    siteSettings: DEFAULT_SITE_SETTINGS,
+    banners: getStoredBanners(),
+    siteSettings: getStoredSiteSettings(),
   };
 }
 

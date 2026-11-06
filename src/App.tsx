@@ -593,15 +593,14 @@ export default function App() {
                 {banners.map((poster) => (
                   <div
                     key={poster.id}
-                    className="w-full shrink-0 relative h-[400px] overflow-hidden bg-zinc-950 select-none flex items-center justify-center"
+                    className="w-full shrink-0 relative aspect-[16/7] sm:aspect-[21/8] md:aspect-[24/8] lg:aspect-[3/1] min-h-[170px] max-h-[440px] overflow-hidden bg-zinc-950 select-none flex items-center justify-center"
                   >
-                    {/* Foto ajustada 100% ao tamanho exato do layout do banner */}
+                    {/* Foto dinâmica que mantém o formato ideal e se ajusta 100% à tela (maior ou menor de altura dinamicamente) */}
                     <img
                       src={poster.src}
                       alt={poster.alt || 'Banner Promocional'}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-center block"
-                      style={{ height: '400px' }}
                     />
                   </div>
                 ))}

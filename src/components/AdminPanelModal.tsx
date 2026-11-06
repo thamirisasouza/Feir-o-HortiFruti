@@ -433,23 +433,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     showToast('Personalização salva e aplicada com sucesso!');
   };
 
-  const handleConfirmReset = () => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Restaurar Catálogo Original',
-      message: 'Tem certeza que deseja restaurar o catálogo de produtos e configurações para o padrão original? Esta ação não pode ser desfeita.',
-      confirmLabel: 'Restaurar Padrão',
-      cancelLabel: 'Voltar',
-      isDestructive: true,
-      onConfirm: () => {
-        onResetCatalog();
-        setCustomSettings(DEFAULT_SITE_SETTINGS);
-        setEditingProduct(null);
-        showToast('Catálogo e configurações restaurados para o padrão!');
-        setConfirmDialog(null);
-      },
-    });
-  };
 
   if (!isOpen) return null;
 
@@ -572,7 +555,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               Painel Administrativo
             </h2>
             <p className="text-[11px] text-white/80 leading-none truncate mt-0.5">
-              {isAuthenticated ? 'Gestão de Produtos, Categorias, Banners e Personalização' : 'Acesso Restrito'}
+              {isAuthenticated ? '' : 'Acesso Restrito'}
             </p>
           </div>
         </div>
@@ -1523,6 +1506,33 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         O carrossel exibe as fotos diretamente, sem cards ou títulos
                       </span>
                     </div>
+                  </div>
+
+                  {/* Status de Padrão Permanente */}
+                  <div className="p-3.5 bg-[#EFF7F0] rounded-xl border border-[#BBD9BE] flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-8 h-8 rounded-lg bg-[#0F6E16] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        ✓
+                      </span>
+                      <div>
+                        <h5 className="text-xs font-bold text-[#112A15]">
+                          Banners e Atualizações Definidos como Padrão Permanente
+                        </h5>
+                        <p className="text-[11px] text-[#4A634E]">
+                          Todas as fotos, proporções e ordem dos banners são salvas e mantidas automaticamente como padrão contínuo da loja.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSaveBanners(banners);
+                        showNotification('Banners e configurações salvos como padrão permanente!', 'success');
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg bg-[#0F6E16] text-white text-xs font-bold hover:bg-[#0A520F] transition-all cursor-pointer shadow-2xs active:scale-95"
+                    >
+                      Salvar como Padrão Oficial
+                    </button>
                   </div>
                 </div>
 
