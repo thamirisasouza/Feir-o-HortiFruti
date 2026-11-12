@@ -84,16 +84,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {product.name}
             </h2>
 
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-[#E8F6E9] text-[#0F6E16] text-xs font-semibold">
-                {product.unitLabel}
-              </div>
-              {product.isEsgotado && (
+            {product.isEsgotado && (
+              <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 rounded-md bg-red-100 text-red-700 text-xs font-black uppercase">
                   Esgotado
                 </span>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="pt-1 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-bold font-mono-tabular text-[#0F6E16]">

@@ -35,7 +35,13 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
   todos: '/images/banner_frutas_1.jpg',
 };
 
-function getCategoryVisual(catId: string, prods: ProductItem[]): string {
+function getCategoryVisual(catId: string, prods: ProductItem[], catImage?: string): string {
+  if (catImage && catImage.trim()) {
+    if (catImage.startsWith('data:') || catImage.startsWith('/') || catImage.startsWith('http')) {
+      return catImage;
+    }
+    return `/images/${catImage}.jpg`;
+  }
   if (CATEGORY_IMAGE_MAP[catId]) return CATEGORY_IMAGE_MAP[catId];
   const prod = prods.find((p) => p.categoryId === catId);
   if (prod) {
@@ -146,7 +152,7 @@ export default function App() {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
-  const handleAddCategory = (categoryName: string) => {
+  const handleAddCategory = (categoryName: string, image?: string) => {
     const slug = categoryName
       .toLowerCase()
       .normalize('NFD')
@@ -158,6 +164,7 @@ export default function App() {
     const newCategory: CategoryItem = {
       id: slug || `cat-${Date.now()}`,
       label: categoryName,
+      image: image || '',
     };
 
     setCategories((prev) => {
@@ -167,9 +174,18 @@ export default function App() {
     });
   };
 
-  const handleEditCategory = (categoryId: string, newLabel: string) => {
+  const handleEditCategory = (categoryId: string, newLabel: string, newImage?: string) => {
     setCategories((prev) => {
-      const next = prev.map((c) => (c.id === categoryId ? { ...c, label: newLabel } : c));
+      const next = prev.map((c) => {
+        if (c.id === categoryId) {
+          return {
+            ...c,
+            label: newLabel,
+            image: newImage !== undefined ? newImage : c.image,
+          };
+        }
+        return c;
+      });
       saveStoredCategories(next);
       return next;
     });
@@ -671,7 +687,7 @@ export default function App() {
             {/* Ícones Redondos Soltos e Centralizados */}
             <div className="flex items-center justify-center gap-4 sm:gap-7 overflow-x-auto pb-2 scrollbar-none mx-auto max-w-full">
               {categories.map((cat) => {
-                const visual = getCategoryVisual(cat.id, products);
+                const visual = getCategoryVisual(cat.id, products, cat.image);
                 return (
                   <button
                     key={cat.id}

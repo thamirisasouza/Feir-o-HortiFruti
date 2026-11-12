@@ -124,11 +124,19 @@ export function getStoredCategories(): CategoryItem[] {
     if (!raw) return CATEGORIES;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      const hasTodos = parsed.some((c) => c.id === 'todos');
+      const merged: CategoryItem[] = parsed.map((cat: any) => {
+        const def = CATEGORIES.find((c) => c.id === cat.id);
+        return {
+          id: cat.id,
+          label: cat.label,
+          image: cat.image || def?.image || '',
+        };
+      });
+      const hasTodos = merged.some((c) => c.id === 'todos');
       if (!hasTodos) {
-        return [{ id: 'todos', label: 'Todos' }, ...parsed];
+        return [{ id: 'todos', label: 'Todos', image: '/images/banner_frutas_1.jpg' }, ...merged];
       }
-      return parsed;
+      return merged;
     }
   } catch (err) {
     console.error('Erro ao ler categorias do localStorage:', err);

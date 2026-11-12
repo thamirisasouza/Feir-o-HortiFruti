@@ -5,6 +5,7 @@ export type CategoryId = string;
 export interface CategoryItem {
   id: CategoryId;
   label: string;
+  image?: string;
 }
 
 export interface ProductItem {
@@ -26,10 +27,10 @@ export interface ProductItem {
 }
 
 export const CATEGORIES: CategoryItem[] = [
-  { id: 'todos', label: 'Todos' },
-  { id: 'frutas', label: 'Frutas' },
-  { id: 'verduras', label: 'Verduras' },
-  { id: 'legumes', label: 'Legumes' },
+  { id: 'todos', label: 'Todos', image: '/images/banner_frutas_1.jpg' },
+  { id: 'frutas', label: 'Frutas', image: '/images/morango.jpg' },
+  { id: 'verduras', label: 'Verduras', image: '/images/alface.jpg' },
+  { id: 'legumes', label: 'Legumes', image: '/images/cenoura.jpg' },
 ];
 
 export const PRODUCTS: ProductItem[] = [

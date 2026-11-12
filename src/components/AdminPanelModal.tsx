@@ -25,8 +25,8 @@ interface AdminPanelModalProps {
   siteSettings: SiteCustomization;
   onSaveProduct: (product: ProductItem) => void;
   onDeleteProduct: (productId: string) => void;
-  onAddCategory: (categoryName: string) => void;
-  onEditCategory: (categoryId: string, newLabel: string) => void;
+  onAddCategory: (categoryName: string, image?: string) => void;
+  onEditCategory: (categoryId: string, newLabel: string, newImage?: string) => void;
   onDeleteCategory: (categoryId: string) => void;
   onSaveBanners: (banners: BannerItem[]) => void;
   onSaveSiteSettings: (settings: SiteCustomization) => void;
@@ -82,12 +82,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // Product editing modal state
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
 
-  // Category state (creation + inline editing)
+  // Category state (creation + inline editing + photos)
   const [newCatNameInput, setNewCatNameInput] = useState('');
   const [inlineCatError, setInlineCatError] = useState<string | null>(null);
   const [showNewCatModal, setShowNewCatModal] = useState(false);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editingCatLabel, setEditingCatLabel] = useState<string>('');
+  const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
+  const [newCatImage, setNewCatImage] = useState<string>('');
+  const [targetCategoryForDirectPhoto, setTargetCategoryForDirectPhoto] = useState<string | null>(null);
 
   type ProductSortOption = 'nome-asc' | 'nome-desc' | 'preco-asc' | 'preco-desc';
   const [adminSortBy, setAdminSortBy] = useState<ProductSortOption>('nome-asc');
@@ -114,6 +117,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // Hidden file inputs
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const categoryCameraInputRef = useRef<HTMLInputElement>(null);
+  const categoryGalleryInputRef = useRef<HTMLInputElement>(null);
   const bannerUploadInputRef = useRef<HTMLInputElement>(null);
   const newBannerUploadInputRef = useRef<HTMLInputElement>(null);
   const logoUploadInputRef = useRef<HTMLInputElement>(null);
@@ -202,6 +207,85 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   // Handle adding a new category
+  const getCatVisualHelper = (cat: CategoryItem): string => {
+    if (cat.image && cat.image.trim()) {
+      if (cat.image.startsWith('data:') || cat.image.startsWith('/') || cat.image.startsWith('http')) {
+        return cat.image;
+      }
+      return `/images/${cat.image}.jpg`;
+    }
+    const map: Record<string, string> = {
+      frutas: '/images/morango.jpg',
+      verduras: '/images/alface.jpg',
+      legumes: '/images/cenoura.jpg',
+      padaria: '/images/pao.jpg',
+      laticinios: '/images/queijo.jpg',
+      temperos: '/images/tomate.jpg',
+      todos: '/images/banner_frutas_1.jpg',
+    };
+    if (map[cat.id]) return map[cat.id];
+    const prod = products.find((p) => p.categoryId === cat.id);
+    if (prod) {
+      if (prod.artId.startsWith('data:') || prod.artId.startsWith('/') || prod.artId.startsWith('http')) {
+        return prod.artId;
+      }
+      return `/images/${prod.artId}.jpg`;
+    }
+    return '/images/banner_frutas_1.jpg';
+  };
+
+  const handleCategoryPhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 700;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          if (editingCategory) {
+            setEditingCategory((prev) => (prev ? { ...prev, image: compressedDataUrl } : null));
+            showToast('Foto da categoria atualizada!');
+          } else if (targetCategoryForDirectPhoto) {
+            const cat = categories.find((c) => c.id === targetCategoryForDirectPhoto);
+            if (cat) {
+              onEditCategory(cat.id, cat.label, compressedDataUrl);
+              showToast(`Foto da categoria "${cat.label}" atualizada!`);
+            }
+            setTargetCategoryForDirectPhoto(null);
+          } else {
+            setNewCatImage(compressedDataUrl);
+            showToast('Foto selecionada para a nova categoria!');
+          }
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const handleCreateCategory = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newCatNameInput.trim();
@@ -223,8 +307,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       return;
     }
 
-    onAddCategory(trimmed);
+    onAddCategory(trimmed, newCatImage || undefined);
     setNewCatNameInput('');
+    setNewCatImage('');
     setInlineCatError(null);
     setShowNewCatModal(false);
     showToast(`Categoria "${trimmed}" criada com sucesso!`);
@@ -490,6 +575,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         className="hidden"
         onChange={handleLogoUpload}
       />
+      <input
+        ref={categoryCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleCategoryPhotoSelected}
+      />
+      <input
+        ref={categoryGalleryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleCategoryPhotoSelected}
+      />
 
       {/* In-App Floating Notification Banner (Always internal system, never browser) */}
       {systemNotification && (
@@ -743,6 +843,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   onClick={() => {
                     setActiveTab('produtos');
                     setEditingProduct(null);
+                    setEditingCategory(null);
                     setIsMobileMenuOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
@@ -772,10 +873,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   onClick={() => {
                     setActiveTab('categorias');
                     setEditingProduct(null);
+                    setEditingCategory(null);
                     setIsMobileMenuOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                    activeTab === 'categorias' && !editingProduct
+                    activeTab === 'categorias' && !editingProduct && !editingCategory
                       ? 'bg-[#0F6E16] text-white shadow-sm'
                       : 'text-[#1F4224] hover:bg-[#E6F2E7]'
                   }`}
@@ -786,7 +888,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </div>
                   <span
                     className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                      activeTab === 'categorias' && !editingProduct
+                      activeTab === 'categorias' && !editingProduct && !editingCategory
                         ? 'bg-white/20 text-white'
                         : 'bg-[#E6F2E7] text-[#0F6E16]'
                     }`}
@@ -801,6 +903,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   onClick={() => {
                     setActiveTab('banners');
                     setEditingProduct(null);
+                    setEditingCategory(null);
                     setIsMobileMenuOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
@@ -830,6 +933,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   onClick={() => {
                     setActiveTab('personalizacao');
                     setEditingProduct(null);
+                    setEditingCategory(null);
                     setIsMobileMenuOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
@@ -1279,44 +1383,211 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             )}
 
             {/* ------------------------------------------------------- */}
-            {/* TAB 2: CATEGORIAS (EDIÇÃO E EXCLUSÃO)                   */}
+            {/* TAB 2: CATEGORIAS (EDIÇÃO E FOTOS)                      */}
             {/* ------------------------------------------------------- */}
-            {activeTab === 'categorias' && !editingProduct && (
+            {activeTab === 'categorias' && editingCategory && (
+              <div className="bg-white rounded-3xl border-2 border-[#0F6E16] p-5 sm:p-8 shadow-md space-y-6 max-w-2xl mx-auto animate-in fade-in duration-150">
+                <div className="flex items-center justify-between border-b border-[#E0EDE1] pb-4">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold font-display text-[#112A15]">
+                      Editar Categoria: {editingCategory.label}
+                    </h3>
+                    <p className="text-xs text-[#4A634E]">
+                      Configure o nome e a foto da categoria exibida na página inicial e no catálogo.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategory(null)}
+                    className="px-3 py-1.5 text-xs font-semibold text-[#4A634E] hover:text-[#112A15] bg-[#F7FAF7] rounded-lg cursor-pointer"
+                  >
+                    ← Voltar à Lista
+                  </button>
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!editingCategory.label.trim()) {
+                      showNotification('O nome da categoria não pode ficar vazio.', 'warning');
+                      return;
+                    }
+                    onEditCategory(editingCategory.id, editingCategory.label.trim(), editingCategory.image);
+                    showToast(`Categoria "${editingCategory.label}" salva com sucesso!`);
+                    setEditingCategory(null);
+                  }}
+                  className="space-y-6"
+                >
+                  {/* Photo management for category - EXACTLY like items! */}
+                  <div className="p-4 bg-[#F7FAF7] rounded-2xl border border-[#D5E6D6] space-y-3">
+                    <label className="block text-xs font-bold text-[#1F4224]">
+                      Foto da Categoria (Câmera ou Upload)
+                    </label>
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#0F6E16] bg-white shrink-0 shadow-2xs p-1">
+                        <img
+                          src={getCatVisualHelper(editingCategory)}
+                          alt={editingCategory.label}
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => categoryCameraInputRef.current?.click()}
+                          className="px-4 py-2 text-xs font-bold rounded-xl bg-[#0F6E16] hover:bg-[#0A520F] text-white flex items-center gap-2 cursor-pointer shadow-xs"
+                        >
+                          <span>📷</span>
+                          <span>Tirar Foto (Câmera)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => categoryGalleryInputRef.current?.click()}
+                          className="px-4 py-2 text-xs font-bold rounded-xl bg-[#FF6600] hover:bg-[#E05500] text-white flex items-center gap-2 cursor-pointer shadow-xs"
+                        >
+                          <span>📁</span>
+                          <span>Upload de Imagem</span>
+                        </button>
+                        {editingCategory.image && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingCategory({ ...editingCategory, image: '' })}
+                            className="px-3 py-2 text-xs font-semibold rounded-xl text-red-600 hover:bg-red-50 cursor-pointer"
+                          >
+                            Remover Foto
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Name input */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1F4224] mb-1">
+                      Nome da Categoria *
+                    </label>
+                    <input
+                      type="text"
+                      value={editingCategory.label}
+                      onChange={(e) => setEditingCategory({ ...editingCategory, label: e.target.value })}
+                      required
+                      disabled={editingCategory.id === 'todos'}
+                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16] disabled:bg-gray-100 disabled:text-gray-500"
+                    />
+                    {editingCategory.id === 'todos' && (
+                      <span className="text-[11px] text-[#66806A] mt-1 block">
+                        A categoria padrão "Todos" não pode ter o nome alterado, mas você pode personalizar sua foto.
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Form actions */}
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E0EDE1]">
+                    <button
+                      type="button"
+                      onClick={() => setEditingCategory(null)}
+                      className="px-5 py-2.5 text-xs sm:text-sm font-semibold text-[#4A634E] hover:text-[#112A15] cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="min-h-[44px] px-8 py-2.5 text-xs sm:text-sm font-bold text-white bg-[#0F6E16] hover:bg-[#0A520F] rounded-xl transition-all shadow-md active:scale-[0.99] cursor-pointer"
+                    >
+                      Salvar Categoria
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {activeTab === 'categorias' && !editingCategory && !editingProduct && (
               <div className="space-y-5 max-w-4xl mx-auto">
-                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-[#D5E6D6] shadow-2xs space-y-3">
+                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-[#D5E6D6] shadow-2xs space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-base sm:text-lg font-bold font-display text-[#112A15]">
                         Gerenciamento de Categorias
                       </h3>
                       <p className="text-xs text-[#4A634E] mt-0.5">
-                        Categorias podem ser criadas, editadas e excluídas. Clique no lápis para renomear ou na lixeira para excluir.
+                        Adicione novas categorias com foto, edite fotos e nomes ou exclua categorias existentes.
                       </p>
                     </div>
                   </div>
 
-                  {/* Add New Category Form */}
-                  <form onSubmit={handleCreateCategory} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
-                    <input
-                      type="text"
-                      value={newCatNameInput}
-                      onChange={(e) => {
-                        setNewCatNameInput(e.target.value);
-                        setInlineCatError(null);
-                      }}
-                      placeholder="Nome da nova categoria (ex: Padaria, Queijos, Bebidas...)"
-                      className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16]"
-                    />
-                    <button
-                      type="submit"
-                      className="min-h-[42px] px-6 py-2 text-xs sm:text-sm font-bold text-white bg-[#0F6E16] hover:bg-[#0A520F] rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
-                    >
-                      + Criar Categoria
-                    </button>
+                  {/* Add New Category Form (with Photo attachment!) */}
+                  <form onSubmit={handleCreateCategory} className="space-y-3 pt-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                      {/* Photo preview / upload button for new category */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#0F6E16] bg-[#EFF7F0] flex items-center justify-center shrink-0">
+                          {newCatImage ? (
+                            <img src={newCatImage} alt="Prévia" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-bold text-[#0F6E16]">🏷️</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTargetCategoryForDirectPhoto(null);
+                              categoryCameraInputRef.current?.click();
+                            }}
+                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-[#E6F2E7] hover:bg-[#D5EBD6] text-[#0F6E16] flex items-center gap-1 cursor-pointer"
+                            title="Tirar foto para nova categoria"
+                          >
+                            <span>📷</span>
+                            <span className="hidden sm:inline">Foto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTargetCategoryForDirectPhoto(null);
+                              categoryGalleryInputRef.current?.click();
+                            }}
+                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-[#FFF2E8] hover:bg-[#FFE3D0] text-[#FF6600] flex items-center gap-1 cursor-pointer"
+                            title="Upload de foto para nova categoria"
+                          >
+                            <span>📁</span>
+                            <span className="hidden sm:inline">Upload</span>
+                          </button>
+                          {newCatImage && (
+                            <button
+                              type="button"
+                              onClick={() => setNewCatImage('')}
+                              className="text-xs text-red-500 hover:text-red-700 px-1 cursor-pointer"
+                              title="Remover foto selecionada"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={newCatNameInput}
+                        onChange={(e) => {
+                          setNewCatNameInput(e.target.value);
+                          setInlineCatError(null);
+                        }}
+                        placeholder="Nome da nova categoria (ex: Padaria, Queijos, Temperos...)"
+                        className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-white border border-[#BBD9BE] rounded-xl text-[#112A15] focus:outline-none focus:border-[#0F6E16]"
+                      />
+
+                      <button
+                        type="submit"
+                        className="min-h-[42px] px-6 py-2 text-xs sm:text-sm font-bold text-white bg-[#0F6E16] hover:bg-[#0A520F] rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+                      >
+                        + Criar Categoria
+                      </button>
+                    </div>
+
+                    {inlineCatError && (
+                      <p className="text-xs text-red-600 font-semibold">{inlineCatError}</p>
+                    )}
                   </form>
-                  {inlineCatError && (
-                    <p className="text-xs text-red-600 font-semibold">{inlineCatError}</p>
-                  )}
                 </div>
 
                 {/* Categories List */}
@@ -1327,99 +1598,97 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         ? products.length
                         : products.filter((p) => p.categoryId === cat.id).length;
                     const isSystemAll = cat.id === 'todos';
-                    const isEditing = editingCatId === cat.id;
+                    const visual = getCatVisualHelper(cat);
 
                     return (
                       <div
                         key={cat.id}
-                        className="px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 hover:bg-[#F9FCF9] transition-colors"
+                        className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#F9FCF9] transition-colors"
                       >
-                        {/* Name or inline edit */}
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#0F6E16] shrink-0" />
-                          {isEditing ? (
-                            <div className="flex items-center gap-2 flex-1 max-w-sm">
-                              <input
-                                type="text"
-                                value={editingCatLabel}
-                                onChange={(e) => setEditingCatLabel(e.target.value)}
-                                autoFocus
-                                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border-2 border-[#0F6E16] rounded-lg text-[#112A15] focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleSaveInlineCategoryEdit(cat.id)}
-                                className="px-3 py-1.5 text-xs font-bold text-white bg-[#0F6E16] hover:bg-[#0A520F] rounded-lg cursor-pointer shrink-0"
-                              >
-                                Salvar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingCatId(null)}
-                                className="px-2.5 py-1.5 text-xs font-semibold text-[#4A634E] hover:text-[#112A15] bg-[#E6F2E7] rounded-lg cursor-pointer shrink-0"
-                              >
-                                Cancelar
-                              </button>
+                        {/* Photo Thumbnail + Name */}
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          {/* Category Round photo thumbnail */}
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-[#D5E6D6] bg-[#EFF7F0] shrink-0 p-0.5 shadow-2xs">
+                            <img
+                              src={visual}
+                              alt={cat.label}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-bold text-[#112A15] truncate">
+                                {cat.label}
+                              </h4>
+                              {isSystemAll && (
+                                <span className="text-[10px] font-semibold text-[#66806A] bg-gray-100 px-2 py-0.5 rounded-full">
+                                  Exibir todos
+                                </span>
+                              )}
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#E6F2E7] text-[#0F6E16]">
+                                {count} {count === 1 ? 'item' : 'itens'}
+                              </span>
                             </div>
-                          ) : (
-                            <span className="text-sm font-bold text-[#112A15] truncate">
-                              {cat.label} {isSystemAll && <span className="text-xs font-normal text-[#66806A]">(Exibir todos)</span>}
-                            </span>
-                          )}
+                            <p className="text-xs text-[#66806A] mt-0.5 truncate">
+                              ID: {cat.id}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Items badge & Action buttons */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#E6F2E7] text-[#0F6E16]">
-                            {count} {count === 1 ? 'item' : 'itens'}
-                          </span>
+                        {/* Action buttons: Alterar Foto, Editar, Excluir */}
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+                          {/* Quick Change Photo Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTargetCategoryForDirectPhoto(cat.id);
+                              categoryGalleryInputRef.current?.click();
+                            }}
+                            className="min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-xl border border-[#CBE5CD] text-[#0F6E16] hover:bg-[#E6F2E7] transition-colors cursor-pointer flex items-center gap-1.5"
+                            title={`Trocar foto da categoria "${cat.label}"`}
+                          >
+                            <span>📷</span>
+                            <span>Alterar Foto</span>
+                          </button>
 
-                          {!isSystemAll && !isEditing && (
-                            <>
-                              {/* Edit Category Button */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingCatId(cat.id);
-                                  setEditingCatLabel(cat.label);
-                                }}
-                                className="text-xs font-semibold text-[#0F6E16] hover:bg-emerald-50 p-2 rounded-lg transition-colors cursor-pointer"
-                                title="Editar nome da categoria"
-                              >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                              </button>
+                          {/* Full Edit Category Button */}
+                          <button
+                            type="button"
+                            onClick={() => setEditingCategory(cat)}
+                            className="min-h-[36px] px-3.5 py-1 text-xs font-bold text-[#0F6E16] bg-[#E6F2E7] hover:bg-[#D5EBD6] rounded-xl transition-colors cursor-pointer"
+                          >
+                            Editar
+                          </button>
 
-                              {/* Delete Category Button */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const msg = count > 0
+                          {/* Delete Category Button (if not 'todos') */}
+                          {!isSystemAll && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const msg =
+                                  count > 0
                                     ? `A categoria "${cat.label}" possui ${count} produtos. Deseja excluí-la? Os produtos vinculados serão preservados no catálogo geral.`
                                     : `Deseja realmente excluir a categoria "${cat.label}"?`;
-                                  setConfirmDialog({
-                                    isOpen: true,
-                                    title: 'Excluir Categoria',
-                                    message: msg,
-                                    confirmLabel: 'Excluir Categoria',
-                                    cancelLabel: 'Cancelar',
-                                    isDestructive: true,
-                                    onConfirm: () => {
-                                      onDeleteCategory(cat.id);
-                                      showToast(`Categoria "${cat.label}" excluída com sucesso!`);
-                                      setConfirmDialog(null);
-                                    },
-                                  });
-                                }}
-                                className="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors cursor-pointer"
-                                title="Excluir categoria"
-                              >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </>
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Excluir Categoria',
+                                  message: msg,
+                                  confirmLabel: 'Excluir Categoria',
+                                  cancelLabel: 'Cancelar',
+                                  isDestructive: true,
+                                  onConfirm: () => {
+                                    onDeleteCategory(cat.id);
+                                    showToast(`Categoria "${cat.label}" excluída com sucesso!`);
+                                    setConfirmDialog(null);
+                                  },
+                                });
+                              }}
+                              className="min-h-[36px] px-3 py-1 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                              title="Excluir categoria"
+                            >
+                              Excluir
+                            </button>
                           )}
                         </div>
                       </div>
